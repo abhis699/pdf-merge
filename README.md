@@ -16,6 +16,15 @@ A beautiful desktop application for managing PDF files with a clean, intuitive i
   - Custom filename for output files
   - Batch processing of multiple files
 
+- **PDF Viewer**: Open and view PDF files with a modern interface
+  - Navigate through pages with ease
+  - Zoom in/out with customizable zoom levels
+  - Display file information and page count
+  - Full-screen presentation mode with auto-hiding controls
+  - Continuous scrolling through multiple pages
+  - Keyboard shortcuts for navigation (Arrow keys, ESC)
+  - Print PDFs directly from the viewer
+
 - **Common Features**
   - Modern, user-friendly interface
   - Drag and drop support
@@ -28,6 +37,8 @@ A beautiful desktop application for managing PDF files with a clean, intuitive i
 - PyQt5
 - PyPDF2
 - pikepdf
+- PyMuPDF (fitz)
+- PyQtWebEngine
 
 ## Installation
 
@@ -98,6 +109,36 @@ Simply double-click the `run_ultimate_pdf_tools.bat` file included in the direct
    - For other methods: Choose an output directory and enter a base name for the output files
 6. The application will create properly named PDF files according to your settings
 
+#### PDF Viewer
+1. From the main menu, click on "View & Present PDF Files"
+2. Click the "Open PDF" button in the toolbar
+3. Select a PDF file to view
+4. Navigate through pages using:
+   - Previous/Next buttons
+   - Page number input box
+5. Adjust zoom level using:
+   - Zoom In/Out buttons
+   - Zoom level dropdown (50% to 300%)
+6. View file information including name, size, and page count
+7. Print the PDF using the "Print" button
+8. Enter full-screen presentation mode:
+   - Click the "Full Screen" button in the toolbar
+   - Or press F11 key
+   - Exit full-screen mode with ESC key
+
+### Full-screen Presentation Mode
+
+The full-screen mode offers enhanced viewing capabilities:
+
+- **Continuous scrolling**: Scroll smoothly through all pages in the document
+- **Auto-hiding navigation bar**: Controls fade when not in use and appear on mouse movement
+- **Navigation**: 
+  - Left/Right arrow keys to move between pages
+  - ESC key to exit full-screen mode
+  - On-screen controls for page navigation and zoom
+- **Smart page detection**: The viewer automatically detects which page is currently visible while scrolling
+- **Cross-page reading**: Seamlessly read content that spans multiple pages
+
 ### Splitting Options
 
 The application offers three splitting methods:
@@ -109,4 +150,13 @@ The application offers three splitting methods:
 ## Project Structure
 
 - `main.py` - Main entry point with menu interface
-- `pdf_merger.py`
+- `pdf_merger.py` - PDF merging functionality
+- `pdf_splitter.py` - PDF splitting functionality
+- `pdf_viewer.py` - PDF viewing functionality in standard window
+- `pdf_fullscreen_viewer.py` - Full-screen PDF viewer with continuous scrolling
+- `utils.py` - Shared utility functions and classes
+- `run_ultimate_pdf_tools.bat` - Windows launcher script
+
+## Created By
+
+This application was created by Abhishek Shukla. Visit [my GitHub profile](https://github.com/abhis699) for more projects.

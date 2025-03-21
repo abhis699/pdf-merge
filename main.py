@@ -3,6 +3,11 @@
 
 import os
 import sys
+import warnings
+
+# Filter out PyQt5 deprecation warnings about sipPyTypeDict
+warnings.filterwarnings("ignore", category=DeprecationWarning, message="sipPyTypeDict\(\) is deprecated")
+
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QLabel, 
                             QWidget, QFrame, QGraphicsDropShadowEffect)
@@ -12,6 +17,7 @@ from PyQt5.QtGui import QIcon, QColor, QFont, QCursor
 # Import the modules for PDF merging and splitting
 from pdf_merger import PDFMergerWindow
 from pdf_splitter import PDFSplitterWindow
+from pdf_viewer import PDFViewerWindow
 
 # Define color constants
 PRIMARY_COLOR = "#1976D2"
@@ -86,11 +92,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.merger_window = None
         self.splitter_window = None
+        self.viewer_window = None
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle('Ultimate PDF Tools')
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 700)
         self.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {LIGHT_BG_COLOR};
@@ -121,7 +128,7 @@ class MainWindow(QMainWindow):
             font-weight: bold;
             color: white;
         """)
-        subtitle_label = QLabel('Merge, split, and manage PDF files with ease')
+        subtitle_label = QLabel('Merge, split, view, and present PDF files with ease')
         subtitle_label.setStyleSheet("""
             font-size: 15px;
             color: rgba(255, 255, 255, 0.9);
@@ -165,22 +172,42 @@ class MainWindow(QMainWindow):
         shadow.setOffset(0, 2)
         buttons_container.setGraphicsEffect(shadow)
         
-        buttons_layout = QHBoxLayout(buttons_container)
-        buttons_layout.setSpacing(40)
+        buttons_layout = QVBoxLayout(buttons_container)
+        buttons_layout.setSpacing(20)
         buttons_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Create two rows of buttons
+        top_row_layout = QHBoxLayout()
+        top_row_layout.setSpacing(40)
         
         # PDF Merger Button
         self.merger_button = FeatureButton("Merge PDF Files")
         self.merger_button.clicked.connect(self.open_merger)
         
-        # PDF Splitter Button (replacing compressor)
+        # PDF Splitter Button
         self.splitter_button = FeatureButton("Split PDF Files")
         self.splitter_button.clicked.connect(self.open_splitter)
         
-        buttons_layout.addStretch()
-        buttons_layout.addWidget(self.merger_button)
-        buttons_layout.addWidget(self.splitter_button)
-        buttons_layout.addStretch()
+        top_row_layout.addStretch()
+        top_row_layout.addWidget(self.merger_button)
+        top_row_layout.addWidget(self.splitter_button)
+        top_row_layout.addStretch()
+        
+        # Second row layout
+        bottom_row_layout = QHBoxLayout()
+        bottom_row_layout.setSpacing(40)
+        
+        # PDF Viewer Button (new)
+        self.viewer_button = FeatureButton("View & Present PDF Files")
+        self.viewer_button.clicked.connect(self.open_viewer)
+        
+        bottom_row_layout.addStretch()
+        bottom_row_layout.addWidget(self.viewer_button)
+        bottom_row_layout.addStretch()
+        
+        # Add both rows to the buttons container
+        buttons_layout.addLayout(top_row_layout)
+        buttons_layout.addLayout(bottom_row_layout)
         
         main_layout.addWidget(buttons_container)
         main_layout.addStretch()
@@ -252,6 +279,12 @@ class MainWindow(QMainWindow):
         if not self.splitter_window:
             self.splitter_window = PDFSplitterWindow(self)
         self.splitter_window.show()
+        self.hide()
+        
+    def open_viewer(self):
+        if not self.viewer_window:
+            self.viewer_window = PDFViewerWindow(self)
+        self.viewer_window.show()
         self.hide()
 
     def open_url(self, url):

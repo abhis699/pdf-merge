@@ -60,6 +60,20 @@ if %errorlevel% neq 0 (
     echo pikepdf is already installed.
 )
 
+:: Check for PyMuPDF (fitz)
+python -c "import fitz" > nul 2>&1
+if %errorlevel% neq 0 (
+    echo Installing PyMuPDF...
+    pip install PyMuPDF==1.22.5
+    if %errorlevel% neq 0 (
+        echo Failed to install PyMuPDF. Please run: pip install PyMuPDF==1.22.5
+        pause
+        exit /b 1
+    )
+) else (
+    echo PyMuPDF is already installed.
+)
+
 echo All dependencies are installed.
 echo Starting Ultimate PDF Tools...
 
