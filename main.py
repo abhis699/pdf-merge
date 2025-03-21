@@ -243,7 +243,7 @@ class MainWindow(QMainWindow):
         creator_label.setCursor(QCursor(Qt.PointingHandCursor))
         
         # Add GitHub link
-        github_url = "https://github.com/abhis699"
+        github_url = "https://github.com/abhis699/pdf-tools"
         
         # Make the label clickable
         creator_label.mousePressEvent = lambda event: self.open_url(github_url)

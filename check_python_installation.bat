@@ -1,14 +1,17 @@
 @echo off
-title PDF Merger by Abhishek Shukla
-
 echo Checking for Python installation...
 python --version > nul 2>&1
 if %errorlevel% neq 0 (
-    echo Python is not installed or not in PATH
-    echo Please install Python from https://www.python.org/downloads/
-    echo Make sure to check "Add Python to PATH" during installation
-    pause
-    exit /b 1
+    echo Python is not installed. Attempting to install using winget...
+    winget install Python.Python.3.11
+    if %errorlevel% neq 0 (
+        echo Failed to install Python using winget.
+        echo Please install Python manually from https://www.python.org/downloads/
+        echo Make sure to check "Add Python to PATH" during installation
+        pause
+        exit /b 1
+    )
+    echo Python installed successfully!
 )
 
 echo Checking for required dependencies...
@@ -60,16 +63,18 @@ if %errorlevel% neq 0 (
     echo pikepdf is already installed.
 )
 
-echo All dependencies are installed.
-echo Starting PDF Merger...
-
-python pdf_merger.py
-
+:: Check for PyMuPDF (fitz)
+python -c "import fitz" > nul 2>&1
 if %errorlevel% neq 0 (
-    echo Error: PDF Merger failed to start.
-    echo Check if all files are present and try again.
-    pause
-    exit /b 1
+    echo Installing PyMuPDF...
+    pip install PyMuPDF
+    if %errorlevel% neq 0 (
+        echo Failed to install PyMuPDF. Please run: pip install PyMuPDF
+        pause
+        exit /b 1
+    )
+) else (
+    echo PyMuPDF is already installed.
 )
 
-exit /b 0 
+echo All dependencies are installed. 
