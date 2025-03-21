@@ -3,13 +3,17 @@
 
 import os
 import sys
+import tempfile
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, 
                             QVBoxLayout, QHBoxLayout, QFileDialog, QLabel, 
                             QWidget, QMessageBox, QListWidgetItem, QAbstractItemView,
-                            QGridLayout, QProgressBar, QFrame, QSplitter, QGraphicsDropShadowEffect)
+                            QGridLayout, QProgressBar, QFrame, QSplitter, QGraphicsDropShadowEffect,
+                            QCheckBox, QComboBox, QGroupBox, QFormLayout)
 from PyQt5.QtCore import Qt, QUrl, QSize, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QIcon, QDrag, QPixmap, QPainter, QColor, QFont, QCursor, QLinearGradient, QPalette
 import PyPDF2
+import pikepdf
+from pikepdf import Pdf
 
 # Define color constants
 PRIMARY_COLOR = "#1976D2"
@@ -23,6 +27,9 @@ LIGHT_TEXT_COLOR = "#FFFFFF"
 SHADOW_COLOR = "#B0BEC5"
 HOVER_COLOR = "#2196F3"
 BORDER_COLOR = "#E0E0E0"
+
+# Import common utilities
+from utils import (HeaderFrame, StyledButton, get_file_size_str, open_file)
 
 class PDFListWidget(QListWidget):
     def __init__(self, parent=None):
@@ -118,104 +125,14 @@ class PDFListWidget(QListWidget):
             super().dropEvent(event)
 
 
-class StyledButton(QPushButton):
-    def __init__(self, text, color, icon_path=None, parent=None):
-        super().__init__(text, parent)
-        self.setMinimumHeight(45)
-        self.setCursor(QCursor(Qt.PointingHandCursor))
-        
-        if icon_path and os.path.exists(icon_path):
-            self.setIcon(QIcon(icon_path))
-            self.setIconSize(QSize(20, 20))
-        
-        # Set up background gradient
-        self.normal_gradient = f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {color}, stop:1 {self._darken_color(color, 20)});
-                color: {LIGHT_TEXT_COLOR};
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-                font-size: 14px;
-            }}
-            QPushButton:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {self._lighten_color(color, 10)}, stop:1 {color});
-            }}
-            QPushButton:pressed {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {self._darken_color(color, 30)}, stop:1 {self._darken_color(color, 20)});
-                padding-top: 10px;
-                padding-bottom: 6px;
-            }}
-            QPushButton:disabled {{
-                background: #BDBDBD;
-                color: #757575;
-            }}
-        """
-        self.setStyleSheet(self.normal_gradient)
-        
-        # Add shadow effect
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(15)
-        shadow.setColor(QColor(SHADOW_COLOR))
-        shadow.setOffset(0, 3)
-        self.setGraphicsEffect(shadow)
-    
-    def _lighten_color(self, color, amount=20):
-        # Simple color lightening function
-        color = color.lstrip('#')
-        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        r = min(255, r + amount)
-        g = min(255, g + amount)
-        b = min(255, b + amount)
-        return f"#{r:02x}{g:02x}{b:02x}"
-    
-    def _darken_color(self, color, amount=20):
-        # Simple color darkening function
-        color = color.lstrip('#')
-        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        r = max(0, r - amount)
-        g = max(0, g - amount)
-        b = max(0, b - amount)
-        return f"#{r:02x}{g:02x}{b:02x}"
-
-
-class HeaderFrame(QFrame):
+class PDFMergerWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        
-        # Create gradient background
-        gradient = QLinearGradient(0, 0, self.width(), 0)
-        gradient.setColorAt(0, QColor(PRIMARY_COLOR))
-        gradient.setColorAt(1, QColor(SECONDARY_COLOR))
-        
-        self.setStyleSheet(f"""
-            HeaderFrame {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                                        stop:0 {PRIMARY_COLOR}, stop:1 {SECONDARY_COLOR});
-                border-radius: 10px;
-                padding: 20px;
-            }}
-        """)
-        
-        # Add shadow effect
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(SHADOW_COLOR))
-        shadow.setOffset(0, 4)
-        self.setGraphicsEffect(shadow)
-
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+        self.parent_window = parent
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('PDF Merger')
+        self.setWindowTitle('PDF Merger - Ultimate PDF Tools')
         self.setGeometry(100, 100, 900, 700)
         self.setStyleSheet(f"""
             QMainWindow {{
@@ -268,6 +185,11 @@ class MainWindow(QMainWindow):
         
         header_layout.addLayout(header_text_layout)
         header_layout.addStretch()
+        
+        # Add back button to return to main menu
+        back_button = StyledButton("Back to Main Menu", PRIMARY_COLOR)
+        back_button.clicked.connect(self.go_back)
+        header_layout.addWidget(back_button)
         
         main_layout.addWidget(header)
 
@@ -405,32 +327,6 @@ class MainWindow(QMainWindow):
         self.merge_button = StyledButton('Merge PDFs', SUCCESS_COLOR)
         self.merge_button.clicked.connect(self.merge_pdfs)
         self.merge_button.setMinimumWidth(180)
-        self.merge_button.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {SUCCESS_COLOR}, stop:1 {self._darken_color(SUCCESS_COLOR, 20)});
-                color: {LIGHT_TEXT_COLOR};
-                border: none;
-                border-radius: 6px;
-                padding: 12px 24px;
-                font-weight: bold;
-                font-size: 16px;
-            }}
-            QPushButton:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {self._lighten_color(SUCCESS_COLOR, 10)}, stop:1 {SUCCESS_COLOR});
-            }}
-            QPushButton:pressed {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 {self._darken_color(SUCCESS_COLOR, 30)}, stop:1 {self._darken_color(SUCCESS_COLOR, 20)});
-                padding-top: 14px;
-                padding-bottom: 10px;
-            }}
-            QPushButton:disabled {{
-                background: #BDBDBD;
-                color: #757575;
-            }}
-        """)
         buttons_layout.addWidget(self.merge_button)
         
         main_layout.addWidget(buttons_container)
@@ -438,82 +334,13 @@ class MainWindow(QMainWindow):
         # Status bar
         self.statusBar().showMessage('Ready')
         
-        # Add creator info at bottom
-        creator_frame = QFrame()
-        creator_frame.setStyleSheet("""
-            QFrame {
-                background-color: #FFFFFF;
-                border-radius: 10px;
-                padding: 8px;
-            }
-        """)
-        
-        creator_layout = QHBoxLayout(creator_frame)
-        creator_layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Add small shadow to creator frame
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setColor(QColor(SHADOW_COLOR))
-        shadow.setOffset(0, 2)
-        creator_frame.setGraphicsEffect(shadow)
-        
-        # Create clickable label with creator info
-        creator_label = QLabel("Created by Abhishek Shukla")
-        creator_label.setStyleSheet("""
-            color: #455A64;
-            font-size: 12px;
-            text-decoration: none;
-            padding: 5px;
-        """)
-        creator_label.setCursor(QCursor(Qt.PointingHandCursor))
-        
-        # Add GitHub link
-        github_url = "https://github.com/abhis699"
-        
-        # Make the label clickable
-        creator_label.mousePressEvent = lambda event: self.open_url(github_url)
-        
-        # Add hover effect
-        creator_label.enterEvent = lambda event: creator_label.setStyleSheet("""
-            color: #1976D2;
-            font-size: 12px;
-            text-decoration: underline;
-            padding: 5px;
-        """)
-        
-        creator_label.leaveEvent = lambda event: creator_label.setStyleSheet("""
-            color: #455A64;
-            font-size: 12px;
-            text-decoration: none;
-            padding: 5px;
-        """)
-        
-        creator_layout.addStretch()
-        creator_layout.addWidget(creator_label)
-        creator_layout.addStretch()
-        
-        main_layout.addWidget(creator_frame)
-        
         self.update_buttons_state()
 
-    def _lighten_color(self, color, amount=20):
-        # Simple color lightening function
-        color = color.lstrip('#')
-        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        r = min(255, r + amount)
-        g = min(255, g + amount)
-        b = min(255, b + amount)
-        return f"#{r:02x}{g:02x}{b:02x}"
-    
-    def _darken_color(self, color, amount=20):
-        # Simple color darkening function
-        color = color.lstrip('#')
-        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        r = max(0, r - amount)
-        g = max(0, g - amount)
-        b = max(0, b - amount)
-        return f"#{r:02x}{g:02x}{b:02x}"
+    def go_back(self):
+        """Return to the main menu"""
+        if self.parent_window:
+            self.parent_window.show()
+        self.hide()
 
     def browse_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, "Select PDF Files", "", "PDF Files (*.pdf)")
@@ -531,10 +358,10 @@ class MainWindow(QMainWindow):
                     # Create a nice-looking item for the list
                     item = QListWidgetItem()
                     file_name = os.path.basename(file_path)
-                    file_size = self.get_file_size_str(file_path)
+                    file_size = get_file_size_str(file_path)
                     
                     # Format the text with file name and size
-                    item.setText(f"{file_name}")
+                    item.setText(f"{file_name} ({file_size})")
                     item.setToolTip(f"Path: {file_path}\nSize: {file_size}")
                     item.setData(Qt.UserRole, file_path)
                     
@@ -548,15 +375,6 @@ class MainWindow(QMainWindow):
                     QMessageBox.warning(self, "Invalid PDF", f"Could not add {os.path.basename(file_path)}: {str(e)}")
         
         self.update_buttons_state()
-
-    def get_file_size_str(self, file_path):
-        size_bytes = os.path.getsize(file_path)
-        if size_bytes < 1024:
-            return f"{size_bytes} bytes"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes/1024:.1f} KB"
-        else:
-            return f"{size_bytes/(1024*1024):.1f} MB"
 
     def remove_selected(self):
         selected_items = self.pdf_list.selectedItems()
@@ -668,10 +486,12 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage('PDF files merged successfully!', 5000)
             
             # Create a more modern success dialog
+            file_size = get_file_size_str(output_path)
+            
             msg_box = QMessageBox(self)
             msg_box.setWindowTitle("Success")
             msg_box.setText("PDF files merged successfully!")
-            msg_box.setInformativeText("Do you want to open the merged file?")
+            msg_box.setInformativeText(f"Output file size: {file_size}\nDo you want to open the merged file?")
             msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             msg_box.setDefaultButton(QMessageBox.Yes)
             msg_box.setStyleSheet("""
@@ -698,7 +518,7 @@ class MainWindow(QMainWindow):
             """)
             
             if msg_box.exec_() == QMessageBox.Yes:
-                self.open_file(output_path)
+                open_file(output_path)
         
         except Exception as e:
             # Create a better error dialog
@@ -737,22 +557,6 @@ class MainWindow(QMainWindow):
         finally:
             self.progress_bar.setVisible(False)
 
-    def open_file(self, file_path):
-        """Open the file using the default system application"""
-        if sys.platform == 'win32':
-            os.startfile(file_path)
-        elif sys.platform == 'darwin':  # macOS
-            import subprocess
-            subprocess.call(('open', file_path))
-        else:  # Linux and other Unix-like
-            import subprocess
-            subprocess.call(('xdg-open', file_path))
-
-    def open_url(self, url):
-        """Open the URL in the default web browser"""
-        import webbrowser
-        webbrowser.open(url)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -764,7 +568,7 @@ if __name__ == "__main__":
     font = QFont("Segoe UI", 10)
     app.setFont(font)
     
-    window = MainWindow()
+    window = PDFMergerWindow()
     window.show()
     
     sys.exit(app.exec_()) 

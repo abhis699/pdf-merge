@@ -1,5 +1,5 @@
 @echo off
-title PDF Merger by Abhishek Shukla
+title Ultimate PDF Tools
 
 echo Checking for Python installation...
 python --version > nul 2>&1
@@ -61,12 +61,12 @@ if %errorlevel% neq 0 (
 )
 
 echo All dependencies are installed.
-echo Starting PDF Merger...
+echo Starting Ultimate PDF Tools...
 
-python pdf_merger.py
+python main.py
 
 if %errorlevel% neq 0 (
-    echo Error: PDF Merger failed to start.
+    echo Error: Ultimate PDF Tools failed to start.
     echo Check if all files are present and try again.
     pause
     exit /b 1
