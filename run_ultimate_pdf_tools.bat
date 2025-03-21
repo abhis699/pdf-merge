@@ -69,9 +69,9 @@ if %errorlevel% neq 0 (
 python -c "import fitz" > nul 2>&1
 if %errorlevel% neq 0 (
     echo Installing PyMuPDF...
-    pip install PyMuPDF==1.22.5
+    pip install PyMuPDF
     if %errorlevel% neq 0 (
-        echo Failed to install PyMuPDF. Please run: pip install PyMuPDF==1.22.5
+        echo Failed to install PyMuPDF. Please run: pip install PyMuPDF
         pause
         exit /b 1
     )
