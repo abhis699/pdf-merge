@@ -4,11 +4,16 @@ title Ultimate PDF Tools
 echo Checking for Python installation...
 python --version > nul 2>&1
 if %errorlevel% neq 0 (
-    echo Python is not installed or not in PATH
-    echo Please install Python from https://www.python.org/downloads/
-    echo Make sure to check "Add Python to PATH" during installation
-    pause
-    exit /b 1
+    echo Python is not installed. Attempting to install using winget...
+    winget install Python.Python.3.11
+    if %errorlevel% neq 0 (
+        echo Failed to install Python using winget.
+        echo Please install Python manually from https://www.python.org/downloads/
+        echo Make sure to check "Add Python to PATH" during installation
+        pause
+        exit /b 1
+    )
+    echo Python installed successfully!
 )
 
 echo Checking for required dependencies...
